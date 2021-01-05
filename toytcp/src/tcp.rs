@@ -20,13 +20,22 @@ const MSS: usize = 1460;
 const PORT_RANGE: Range<u16> = 40000..60000;
 
 pub struct TCP {
-    sockets: HashMap<SockID, Socket>
+    sockets: RwLock<HashMap<SockID, Socket>>,
+    event_condvar: (Mutex<Option<TCPEvent>>, Condvar),
 }
 
 impl TCP {
-    pub fn new() -> Self {
-        let sockets = HashMap::new();
-        let tcp = Self { sockets };
+    pub fn new() -> Arc<Self> {
+        let sockets = RwLock::new(HashMap::new());
+        let tcp = Arc::new(Self {
+            sockets,
+            event_condvar: (Mutex::new(None), Condvar::new()),
+        });
+        let cloned_tcp = tcp.clone();
+        std::thread::spawn(move || {
+            // パケットの受信用スレッド
+            cloned_tcp.receive_handler().unwrap();
+        });
         tcp
     }
 
