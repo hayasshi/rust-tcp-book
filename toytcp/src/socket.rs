@@ -1,6 +1,6 @@
 use crate::packet::TCPPacket;
 use crate::tcpflags;
-use IpNextHeaderProtocols::Ipv4;
+use IpNextHeaderProtocols::{Ipv4, Tcp};
 use anyhow::{Context, Result};
 use pnet::packet::{Packet, ip::IpNextHeaderProtocols, tcp};
 use pnet::transport::{self, TransportChannelType, TransportProtocol, TransportSender};
@@ -22,6 +22,7 @@ pub struct Socket {
     pub remote_port: u16,
     pub send_param: SendParam,
     pub recv_param: RecvParam,
+    pub status: TcpStatus,
     pub sender: TransportSender,
 }
 
@@ -76,6 +77,7 @@ impl Socket {
         remote_addr: Ipv4Addr,
         local_port: u16,
         remote_port: u16,
+        status: TcpStatus,
     ) ->Result<Self> {
         let (sender, _) = transport::transport_channel(
             65535,
@@ -98,6 +100,7 @@ impl Socket {
                 window: SOCKET_BUFFER_SIZE as u16,
                 tail: 0,
             },
+            status,
             sender,
         })
     }
