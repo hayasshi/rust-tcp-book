@@ -8,6 +8,7 @@ use rand::{rngs::ThreadRng, Rng};
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::process::Command;
+use std::ptr::NonNull;
 use std::sync::{Arc, Condvar, Mutex, RwLock, RwLockWriteGuard};
 use std::time::{Duration, SystemTime};
 use std::{cmp, ops::Range, str, thread};
@@ -25,6 +26,7 @@ pub struct TCP {
 }
 
 impl TCP {
+
     pub fn new() -> Arc<Self> {
         let sockets = RwLock::new(HashMap::new());
         let tcp = Arc::new(Self {
@@ -172,6 +174,31 @@ impl TCP {
         }
         Ok(())
     }
+
+    /// 指定したソケット ID と種別のイベントを待機
+    fn wait_event(&self, sock_id: SockID, kind: TCPEventKind) {
+        let (lock, cvar) = &self.event_condvar;
+        let mut event = lock.lock().unwrap();
+        loop {
+            if let Some(ref e) = *event {
+                if e.sock_id == sock_id && e.kind == kind {
+                    break;
+                }
+            }
+            // cvar が notify されるまで event のロックを外して待機
+            event = cvar.wait(event).unwrap();
+        }
+        dbg!(&event);
+        *event = None;
+    }
+
+    fn publish_event(&self, sock_id: SockID, kind: TCPEventKind) {
+        let (lock, cvar) = &self.event_condvar;
+        let mut e = lock.lock().unwrap();
+        *e = Some(TCPEvent::new(sock_id, kind));
+        cvar.notify_all();
+    }
+
 }
 
 // 宛先 IP アドレスに対する送信元インタフェースの IP アドレスを取得する
@@ -192,4 +219,24 @@ fn get_source_addr_to(addr: Ipv4Addr) -> Result<Ipv4Addr> {
     let ip = output.next().context("failed to get src ip")?;
     dbg!("source addr", ip);
     ip.parse().context("failed to parse source ip")
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct TCPEvent {
+    sock_id: SockID, // イベント発生もとのソケット ID
+    kind: TCPEventKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TCPEventKind {
+    ConnectionCompleted,
+    Acked,
+    DataArrived,
+    ConnectionClosed,
+}
+
+impl TCPEvent {
+    fn new(sock_id: SockID, kind: TCPEventKind) -> Self {
+        Self { sock_id, kind }
+    }
 }
