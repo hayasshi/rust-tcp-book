@@ -26,7 +26,6 @@ pub struct TCP {
 }
 
 impl TCP {
-
     pub fn new() -> Arc<Self> {
         let sockets = RwLock::new(HashMap::new());
         let tcp = Arc::new(Self {
@@ -46,7 +45,7 @@ impl TCP {
             let local_port = rng.gen_range(PORT_RANGE);
             let table = self.sockets.read().unwrap();
             if table.keys().all(|k| local_port != k.2) {
-                return Ok(local_port)
+                return Ok(local_port);
             }
         }
         anyhow::bail!("no available port found.")
@@ -77,7 +76,11 @@ impl TCP {
 
     fn receive_handler(&self) -> Result<()> {
         dbg!("begin recv thread");
-        let (_, mut receiver) = transport::transport_channel(65535, TransportChannelType::Layer3(IpNextHeaderProtocols::Tcp)).unwrap(); // IPアドレスが必要なのでIPパケットレベルで取得
+        let (_, mut receiver) = transport::transport_channel(
+            65535,
+            TransportChannelType::Layer3(IpNextHeaderProtocols::Tcp),
+        )
+        .unwrap(); // IPアドレスが必要なのでIPパケットレベルで取得
         let mut packet_iter = transport::ipv4_packet_iter(&mut receiver);
         loop {
             let (packet, remote_addr) = match packet_iter.next() {
@@ -114,10 +117,10 @@ impl TCP {
                     local_addr,
                     UNDETERMINED_IP_ADDR,
                     packet.get_dest(),
-                    UNDETERMINED_PORT
+                    UNDETERMINED_PORT,
                 )) {
                     Some(socket) => socket, // リスニングソケット
-                    None => continue,                  // どのソケットにも該当しないものは無視
+                    None => continue,       // どのソケットにも該当しないものは無視
                 },
             };
 
@@ -160,7 +163,6 @@ impl TCP {
                 )?;
                 dbg!("status: synsent ->", &socket.status);
                 self.publish_event(socket.get_sock_id(), TCPEventKind::ConnectionCompleted);
-
             } else {
                 socket.status = TcpStatus::SynRecv;
                 socket.send_tcp_packet(
@@ -198,7 +200,6 @@ impl TCP {
         *e = Some(TCPEvent::new(sock_id, kind));
         cvar.notify_all();
     }
-
 }
 
 // 宛先 IP アドレスに対する送信元インタフェースの IP アドレスを取得する

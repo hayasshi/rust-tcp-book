@@ -1,14 +1,14 @@
 use crate::packet::TCPPacket;
 use crate::tcpflags;
-use IpNextHeaderProtocols::{Ipv4, Tcp};
 use anyhow::{Context, Result};
-use pnet::packet::{Packet, ip::IpNextHeaderProtocols, tcp};
+use pnet::packet::{ip::IpNextHeaderProtocols, tcp, Packet};
 use pnet::transport::{self, TransportChannelType, TransportProtocol, TransportSender};
 use pnet::util;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::SystemTime;
+use IpNextHeaderProtocols::{Ipv4, Tcp};
 
 const SOCKET_BUFFER_SIZE: usize = 4380;
 
@@ -78,7 +78,7 @@ impl Socket {
         local_port: u16,
         remote_port: u16,
         status: TcpStatus,
-    ) ->Result<Self> {
+    ) -> Result<Self> {
         let (sender, _) = transport::transport_channel(
             65535,
             TransportChannelType::Layer4(TransportProtocol::Ipv4(IpNextHeaderProtocols::Tcp)),

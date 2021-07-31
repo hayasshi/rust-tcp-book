@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn echo_server(address:&str) -> Result<(), Box<dyn Error>> {
+fn echo_server(address: &str) -> Result<(), Box<dyn Error>> {
     let listener = TcpListener::bind(address)?;
     loop {
         let (mut stream, _) = listener.accept()?;
